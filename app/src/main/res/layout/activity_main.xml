@@ -2,70 +2,38 @@
 <layout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <RelativeLayout xmlns:tools="http://schemas.android.com/tools"
         android:id="@+id/main"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:gravity="center"
+        tools:context=".MainActivity">
 
-        <androidx.camera.view.PreviewView
-            android:id="@+id/viewFinder"
+        <Button
+            android:id="@+id/btnAttendance"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            app:layout_constraintBottom_toTopOf="@id/controlsContainer"
-            app:layout_constraintHeight_percent="0.7"
-            app:layout_constraintTop_toTopOf="parent" />
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="32dp"
+            android:layout_marginVertical="8dp"
+            android:text="Mark Attendance" />
 
-        <View
-            android:id="@+id/faceOverlay"
-            android:layout_width="250dp"
-            android:layout_height="300dp"
-            android:background="@drawable/face_overlay"
-            app:layout_constraintBottom_toBottomOf="@id/viewFinder"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintRight_toRightOf="parent"
-            app:layout_constraintTop_toTopOf="@id/viewFinder" />
-
-        <LinearLayout
-            android:id="@+id/controlsContainer"
+        <Button
+            android:id="@+id/btnRegister"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:orientation="vertical"
-            android:padding="16dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/viewFinder">
+            android:layout_height="wrap_content"
+            android:layout_below="@id/btnAttendance"
+            android:layout_marginHorizontal="32dp"
+            android:layout_marginVertical="8dp"
+            android:text="Register New Employee" />
 
-            <TextView
-                android:id="@+id/statusText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Point camera at face to mark attendance"
-                android:textAlignment="center"
-                android:textSize="18sp" />
+        <Button
+            android:id="@+id/btnViewReport"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/btnRegister"
+            android:layout_marginHorizontal="32dp"
+            android:layout_marginVertical="8dp"
+            android:text="View Reports" />
 
-            <Button
-                android:id="@+id/registerButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="Register New Employee" />
-
-            <Button
-                android:id="@+id/viewReportButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="View Reports" />
-
-            <TextView
-                android:id="@+id/debugText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_margin="16dp"
-                android:background="#80000000"
-                android:padding="8dp"
-                android:textColor="#FFFFFF"
-                android:visibility="gone" />
-        </LinearLayout>
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
+    </RelativeLayout>
 </layout>

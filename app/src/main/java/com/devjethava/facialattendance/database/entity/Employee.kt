@@ -5,11 +5,12 @@ import androidx.room.PrimaryKey
 import androidx.room.TypeConverter
 import com.google.common.reflect.TypeToken
 import com.google.gson.Gson
+import java.util.UUID
 
 // Data Classes and Database
 @Entity(tableName = "employees")
 data class Employee(
-    @PrimaryKey val id: String,
+    @PrimaryKey val id: String = "CCC${UUID.randomUUID()}",
     val name: String,
     val faceEmbedding: String
 ) {
@@ -23,12 +24,8 @@ data class Employee(
     }
 
     companion object {
-        fun fromEmbedding(id: String, name: String, embedding: FloatArray): Employee {
-            return Employee(
-                id = id,
-                name = name,
-                faceEmbedding = embedding.joinToString(",")
-            )
+        fun fromEmbedding(name: String, embedding: FloatArray): Employee {
+            return Employee(name = name, faceEmbedding = embedding.joinToString(","))
         }
     }
 }

@@ -30,12 +30,6 @@
         android:theme="@style/Theme.FacialAttendance"
         tools:targetApi="31">
         <activity
-            android:name=".RegistrationActivity"
-            android:exported="false" />
-        <activity
-            android:name=".ReportActivity"
-            android:exported="false" />
-        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
@@ -44,6 +38,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".RegistrationActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ReportActivity"
+            android:exported="false" />
+        <activity
+            android:name=".AttendanceActivity"
+            android:exported="true" />
     </application>
 
 </manifest>

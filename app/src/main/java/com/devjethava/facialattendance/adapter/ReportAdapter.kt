@@ -16,9 +16,9 @@ class ReportAdapter : RecyclerView.Adapter<ReportAdapter.ReportViewHolder>() {
     private var reports = listOf<AttendanceReport>()
 
     class ReportViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val nameText: TextView = view.findViewById(R.id.nameText)
-        val dateText: TextView = view.findViewById(R.id.dateText)
-        val typeText: TextView = view.findViewById(R.id.typeText)
+        val nameText: TextView = view.findViewById(R.id.tvName)
+        val dateText: TextView = view.findViewById(R.id.tvDate)
+        val typeText: TextView = view.findViewById(R.id.tvType)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ReportViewHolder {
@@ -30,8 +30,8 @@ class ReportAdapter : RecyclerView.Adapter<ReportAdapter.ReportViewHolder>() {
     override fun onBindViewHolder(holder: ReportViewHolder, position: Int) {
         val report = reports[position]
         holder.nameText.text = report.name
-        holder.dateText.text = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-            .format(Date(report.timestamp))
+        holder.dateText.text =
+            SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(report.timestamp))
         holder.typeText.text = report.type
     }
 

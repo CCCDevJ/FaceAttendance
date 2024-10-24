@@ -21,10 +21,9 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.devjethava.facialattendance.database.AppDatabase
+import com.devjethava.facialattendance.database.entity.Attendance
 import com.devjethava.facialattendance.database.entity.Employee
-import com.devjethava.facialattendance.databinding.ActivityRegistrationBinding
-import com.devjethava.facialattendance.databinding.DialogRegistrationBinding
-import com.google.mediapipe.framework.MediaPipeException
+import com.devjethava.facialattendance.databinding.ActivityAttendanceBinding
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.tasks.components.containers.Detection
 import com.google.mediapipe.tasks.core.BaseOptions
@@ -36,26 +35,32 @@ import java.io.FileOutputStream
 import java.io.IOException
 import kotlin.math.sqrt
 
-class RegistrationActivity : AppCompatActivity() {
+class AttendanceActivity : AppCompatActivity() {
 
-    private lateinit var binding: ActivityRegistrationBinding
-    private lateinit var cameraProvider: ProcessCameraProvider
-    private lateinit var faceDetector: FaceDetector
-    private lateinit var database: AppDatabase
+    private val TAG = AttendanceActivity::class.java.name
 
-    private var capturedFace: Detection? = null  // Use the correct Detection type
-    private var capturedImage: Bitmap? = null
-
-    private val CAMERA_PERMISSION_REQUEST = 100
-    private val TAG = "RegistrationActivity"
-
+    // Debug mode flag
+    private val SIMILARITY_THRESHOLD = 0.75f
 
     private val MODEL_PATH = "face_detection_short_range.tflite"
+
+    private lateinit var binding: ActivityAttendanceBinding
+    private lateinit var database: AppDatabase
+
+    private lateinit var cameraProvider: ProcessCameraProvider
+    private lateinit var faceDetector: FaceDetector
+
+    private val CAMERA_PERMISSION_REQUEST = 100
+    private var capturedFace: Detection? = null
+    private var capturedImage: Bitmap? = null
+
+    private var flagAttendance = -1
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        binding = ActivityRegistrationBinding.inflate(layoutInflater)
+        binding = ActivityAttendanceBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         ViewCompat.setOnApplyWindowInsetsListener(binding.main) { v, insets ->
@@ -65,22 +70,30 @@ class RegistrationActivity : AppCompatActivity() {
         }
 
         database = AppDatabase.getDatabase(this)
+        flagAttendance = -1
 
-        // Check camera permission first
+        initProcess()
+
+    }
+
+    override fun onRestart() {
+        super.onRestart()
+        initProcess()
+    }
+
+    private fun initProcess() {
         if (checkCameraPermission()) {
             initializeCamera()
         } else {
             requestCameraPermission()
         }
 
-        setupUI()
         copyModelToLocalFile()
         initializeFaceDetector()
     }
 
     private fun copyModelToLocalFile() {
         try {
-            // Copy model from assets to local storage
             val modelPath = File(filesDir, MODEL_PATH)
             if (!modelPath.exists()) {
                 assets.open(MODEL_PATH).use { input ->
@@ -96,9 +109,7 @@ class RegistrationActivity : AppCompatActivity() {
 
     private fun initializeFaceDetector() {
         try {
-            // Use local file path instead of asset path
             val modelPath = File(filesDir, MODEL_PATH).absolutePath
-
             val baseOptions = BaseOptions.builder().setModelAssetPath(modelPath).build()
 
             val options = FaceDetector.FaceDetectorOptions.builder().setBaseOptions(baseOptions)
@@ -107,8 +118,6 @@ class RegistrationActivity : AppCompatActivity() {
             faceDetector = FaceDetector.createFromOptions(this, options)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize face detector: ${e.message}")
-            // Show error to user
-            e.printStackTrace()
             Toast.makeText(this, "Failed to initialize face detection", Toast.LENGTH_LONG).show()
         }
     }
@@ -140,33 +149,17 @@ class RegistrationActivity : AppCompatActivity() {
     }
 
     private fun initializeCamera() {
-        verifyModel()
         setupMediaPipe()
         setupCamera()
     }
 
-    private fun verifyModel() {
-        try {
-            val modelFile = MODEL_PATH
-            val modelSize = assets.open(modelFile).use { it.available() }
-            Log.d(TAG, "Model file size: $modelSize bytes")
-            if (modelSize < 1000) {  // Basic size check
-                Log.e(TAG, "Model file seems too small")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Model verification failed: ${e.message}")
-        }
-    }
-
     private fun setupMediaPipe() {
         try {
-            // First verify the model file exists
             assets.open(MODEL_PATH).use {
                 Log.d(TAG, "Model file found in assets")
             }
 
-            val baseOptions =
-                BaseOptions.builder().setModelAssetPath(MODEL_PATH).build()
+            val baseOptions = BaseOptions.builder().setModelAssetPath(MODEL_PATH).build()
 
             val options = FaceDetector.FaceDetectorOptions.builder().setBaseOptions(baseOptions)
                 .setMinDetectionConfidence(0.5f).setRunningMode(RunningMode.IMAGE).build()
@@ -174,19 +167,8 @@ class RegistrationActivity : AppCompatActivity() {
             faceDetector = FaceDetector.createFromOptions(this, options)
             Log.d(TAG, "MediaPipe Face Detector initialized successfully")
 
-        } catch (e: IOException) {
-            Log.e(TAG, "Error: Model file not found in assets")
-            Toast.makeText(
-                this, "Face detection initialization failed - Model not found", Toast.LENGTH_LONG
-            ).show()
-        } catch (e: MediaPipeException) {
-            Log.e(TAG, "MediaPipe error: ${e.message}")
-            Toast.makeText(
-                this, "Face detection initialization failed - MediaPipe error", Toast.LENGTH_LONG
-            ).show()
         } catch (e: Exception) {
             Log.e(TAG, "Error setting up MediaPipe: ${e.message}")
-            e.printStackTrace()
             Toast.makeText(this, "Face detection initialization failed", Toast.LENGTH_LONG).show()
         }
     }
@@ -207,14 +189,11 @@ class RegistrationActivity : AppCompatActivity() {
     @OptIn(ExperimentalGetImage::class)
     private fun bindCameraPreview() {
         try {
-            // Unbind all previous bindings
             cameraProvider.unbindAll()
 
-            // Preview use case
             val preview = Preview.Builder().build()
             preview.setSurfaceProvider(binding.viewFinder.surfaceProvider)
 
-            // Image analysis use case
             val imageAnalysis =
                 ImageAnalysis.Builder().setTargetRotation(binding.viewFinder.display.rotation)
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build()
@@ -225,11 +204,9 @@ class RegistrationActivity : AppCompatActivity() {
                 processImage(imageProxy)
             }
 
-            // Select front camera
             val cameraSelector =
                 CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_FRONT).build()
 
-            // Bind use cases to camera
             cameraProvider.bindToLifecycle(
                 this, cameraSelector, preview, imageAnalysis
             )
@@ -242,7 +219,6 @@ class RegistrationActivity : AppCompatActivity() {
 
     @ExperimentalGetImage
     private fun processImage(imageProxy: ImageProxy) {
-        // Check if detector is initialized
         if (!::faceDetector.isInitialized) {
             Log.e(TAG, "Face detector not initialized")
             imageProxy.close()
@@ -252,7 +228,6 @@ class RegistrationActivity : AppCompatActivity() {
         val mediaImage = imageProxy.image
         if (mediaImage != null) {
             try {
-                // Convert ImageProxy to MPImage safely
                 val bitmap = imageProxy.toBitmap()
                 val mpImage = BitmapImageBuilder(bitmap).apply {
                     requestedOrientation = imageProxy.imageInfo.rotationDegrees
@@ -264,31 +239,14 @@ class RegistrationActivity : AppCompatActivity() {
                     capturedFace = detectionResult.detections()[0]
                     capturedImage = bitmap
                     runOnUiThread {
-                        updateUI(true)
-                    }
-                } else {
-                    runOnUiThread {
-                        updateUI(false)
+                        markAttendance()
                     }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error processing image: ${e.message}")
-                runOnUiThread {
-                    updateUI(false)
-                }
             }
         }
         imageProxy.close()
-    }
-
-    private fun setupUI() {
-        binding.captureButton.setOnClickListener {
-            if (capturedFace != null && capturedImage != null) {
-                showRegistrationDialog()
-            } else {
-                showError("No face detected")
-            }
-        }
     }
 
     private fun getFaceEmbedding(bitmap: Bitmap): FloatArray? {
@@ -298,113 +256,91 @@ class RegistrationActivity : AppCompatActivity() {
 
             if (result.detections().isEmpty()) {
                 throw Exception("No face detected during embedding generation")
-            } else {
-                // Log detection details
-                val detection = result.detections()[0]
-                Log.d(TAG, "Face detected with confidence: ${detection.categories()[0].score()}")
+            }
 
-                // Get embeddings
-                val embeddings = detection.keypoints().get()
-                if (embeddings.isNotEmpty()) {
-                    Log.d(TAG, "Embedding size: ${embeddings.size}")
-                    Log.d(TAG, "First few values: ${embeddings.take(5)}")
-
-                    val faceEmbedding = FloatArray(embeddings.size * 2)
-                    for (i in 0 until embeddings.size) {
-                        val keypoint = embeddings[i]
-                        faceEmbedding[i * 2] = keypoint.x()
-                        faceEmbedding[i * 2 + 1] = keypoint.y()
-                    }
-
-//                    [ 0.5054561, 0.4880188, 0.51261806, 0.5538109, 0.47113913, 0.49859673, 0.44775456, 0.51016617, 0.5191468, 0.5053663, 0.5240676, 0.6384204 ]
-
-                    Log.d(TAG, "faceEmbedding: $faceEmbedding")
-                    val norm = sqrt(faceEmbedding.sumOf { it * it.toDouble() }).toFloat()
-
-//                    return FloatArray(embeddings.size * 2)
-                    return faceEmbedding.map { it / norm }.toFloatArray()
-                } else {
-                    Log.e(TAG, "Embeddings are null")
+            val detection = result.detections()[0]
+            val embeddings = detection.keypoints().get()
+            if (embeddings.isNotEmpty()) {
+                val faceEmbedding = FloatArray(embeddings.size * 2)
+                for (i in embeddings.indices) {
+                    val keypoint = embeddings[i]
+                    faceEmbedding[i * 2] = keypoint.x()
+                    faceEmbedding[i * 2 + 1] = keypoint.y()
                 }
+
+                val norm = sqrt(faceEmbedding.sumOf { it * it.toDouble() }).toFloat()
+                return faceEmbedding.map { it / norm }.toFloatArray()
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error getting face embedding: ${e.message}")
-            e.printStackTrace()
         }
         return null
     }
 
-    private fun registerEmployee(name: String) {
+    private fun markAttendance() {
         lifecycleScope.launch {
             try {
                 val faceEmbedding = getFaceEmbedding(capturedImage!!)
-
-                if (faceEmbedding == null || faceEmbedding.all { it == 0f }) {
-                    Log.e(TAG, "Invalid embedding generated")
-                    runOnUiThread {
-                        Toast.makeText(
-                            this@RegistrationActivity,
-                            "Failed to process face, please try again",
-                            Toast.LENGTH_LONG
-                        ).show()
+                if (faceEmbedding != null) {
+                    val employee = findMatchingEmployee(faceEmbedding)
+                    if (employee != null) {
+                        logAttendance(employee)
+                        finish()
+                    } else {
+                        Log.e(TAG, "No matching employee found")
                     }
-                    return@launch
-                }
-                val employee = Employee.fromEmbedding(name = name, embedding = faceEmbedding)
-
-                database.employeeDao().insertEmployee(employee)
-                showSuccess("Employee registered successfully")
-//                finish()
-            } catch (e: Exception) {
-                showError("Registration failed: ${e.message}")
-            }
-        }
-    }
-
-    private fun showRegistrationDialog() {
-        val dialogBinding = DialogRegistrationBinding.inflate(layoutInflater)
-
-        AlertDialog.Builder(this).setTitle("Register Employee").setView(dialogBinding.root)
-            .setPositiveButton("Register") { _, _ ->
-                val name = dialogBinding.nameInput.text.toString()
-
-                if (name.isNotBlank()) {
-                    registerEmployee(name)
                 } else {
-                    showError("Please fill all fields")
+                    Log.e(TAG, "Failed to process face embedding")
                 }
-            }.setNegativeButton("Cancel", null).show()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error marking attendance: ${e.message}")
+            }
+        }
     }
 
-    private fun updateUI(faceDetected: Boolean) {
-        runOnUiThread {
-            binding.statusText.text = if (faceDetected) {
-                "Face detected - Ready to capture"
-            } else {
-                "No face detected"
-            }
-            binding.captureButton.isEnabled = faceDetected
+    private suspend fun findMatchingEmployee(faceEmbedding: FloatArray): Employee? {
+        val employees = database.employeeDao().getAllEmployees()
+        return employees.find { employee ->
+            val similarity = cosineSimilarity(faceEmbedding, employee.getEmbeddingArray()!!)
+            similarity > SIMILARITY_THRESHOLD // Similarity threshold for matching
         }
+    }
+
+    private fun cosineSimilarity(x1: FloatArray, x2: FloatArray): Float {
+        val mag1 = sqrt(x1.map { it * it }.sum())
+        val mag2 = sqrt(x2.map { it * it }.sum())
+        val dot = x1.mapIndexed { i, xi -> xi * x2[i] }.sum()
+        return dot / (mag1 * mag2)
+    }
+
+    private fun logAttendance(employee: Employee) {
+        val attendance = Attendance(
+            id = 0,
+            employeeId = employee.id,
+            timestamp = System.currentTimeMillis(),
+            type = "Attendance"
+        )
+        lifecycleScope.launch {
+            flagAttendance++
+            if (flagAttendance == 0) {
+                database.attendanceDao().insertAttendance(attendance)
+                Toast.makeText(
+                    this@AttendanceActivity,
+                    ("${employee.name} marked present!"),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+
     }
 
     private fun showError(message: String) {
-        runOnUiThread {
-            AlertDialog.Builder(this).setTitle("Error").setMessage(message)
-                .setPositiveButton("OK", null).show()
-        }
+        AlertDialog.Builder(this).setTitle("Error").setMessage(message)
+            .setPositiveButton("OK") { dialog, _ -> dialog.dismiss() }.show()
     }
 
     private fun showSuccess(message: String) {
-        runOnUiThread {
-            AlertDialog.Builder(this).setTitle("Success").setMessage(message)
-                .setPositiveButton("OK", null).show()
-        }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        if (::faceDetector.isInitialized) {
-            faceDetector.close()
-        }
+        AlertDialog.Builder(this).setTitle("Success").setMessage(message)
+            .setPositiveButton("OK") { dialog, _ -> dialog.dismiss() }.show()
     }
 }

@@ -53,12 +53,13 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
+    implementation(libs.androidx.espresso.core)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 
     // ML Kit Face Detection
-    implementation("com.google.mlkit:face-detection:16.1.7")
+//    implementation("com.google.mlkit:face-detection:16.1.7")
 
     // CameraX
     implementation("androidx.camera:camera-core:1.3.4")
@@ -74,9 +75,10 @@ dependencies {
     implementation(libs.itextg)
 
     implementation("org.tensorflow:tensorflow-lite:2.9.0")
+    implementation("org.tensorflow:tensorflow-lite-support:0.4.2")
 
-    implementation("com.google.mediapipe:tasks-vision:0.10.16")
-    implementation("com.google.mediapipe:tasks-core:0.10.16")
+    implementation("com.google.mediapipe:tasks-vision:0.20230731")
+    implementation("com.google.mediapipe:tasks-core:0.20230731")
 
     implementation("com.google.code.gson:gson:2.11.0")
 

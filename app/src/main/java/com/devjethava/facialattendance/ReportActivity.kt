@@ -1,9 +1,7 @@
 package com.devjethava.facialattendance
 
-import android.app.DatePickerDialog
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Button
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
@@ -13,7 +11,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.devjethava.facialattendance.adapter.ReportAdapter
 import com.devjethava.facialattendance.database.AppDatabase
-import com.devjethava.facialattendance.databinding.ActivityMainBinding
 import com.devjethava.facialattendance.databinding.ActivityReportBinding
 import com.devjethava.facialattendance.helper.AttendanceReport
 import com.google.android.material.snackbar.Snackbar
@@ -57,46 +54,11 @@ class ReportActivity : AppCompatActivity() {
 
         database = AppDatabase.getDatabase(this)
 
-        setupDateRangePicker()
         setupRecyclerView()
-        setupButtons()
-    }
-
-    private fun setupDateRangePicker() {
-        // Initialize date pickers with current date range
-        binding.startDateInput.setText(formatDate(startDate.time))
-        binding.endDateInput.setText(formatDate(endDate.time))
-
-        binding.startDateInput.setOnClickListener {
-            showDatePicker(true)
-        }
-
-        binding.endDateInput.setOnClickListener {
-            showDatePicker(false)
-        }
-    }
-
-    private fun showDatePicker(isStartDate: Boolean) {
-        val calendar = if (isStartDate) startDate else endDate
-
-        DatePickerDialog(
-            this,
-            { _, year, month, day ->
-                calendar.set(year, month, day)
-                val formattedDate = formatDate(calendar.time)
-                if (isStartDate) {
-                    binding.startDateInput.setText(formattedDate)
-                } else {
-                    binding.endDateInput.setText(formattedDate)
-                }
-            },
-            calendar.get(Calendar.YEAR),
-            calendar.get(Calendar.MONTH),
-            calendar.get(Calendar.DAY_OF_MONTH)
-        ).show()
     }
 
     private fun setupRecyclerView() {
+        generateReport()
         reportAdapter = ReportAdapter()
         binding.reportRecyclerView.apply {
             layoutManager = LinearLayoutManager(this@ReportActivity)
@@ -104,25 +66,11 @@ class ReportActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupButtons() {
-        binding.generateReportButton.setOnClickListener {
-            generateReport(startDate.timeInMillis, endDate.timeInMillis)
-        }
-
-        binding.exportPdfButton.setOnClickListener {
-            lifecycleScope.launch {
-                val report = database.attendanceDao()
-                    .getAttendanceReport(startDate.timeInMillis, endDate.timeInMillis)
-                exportToPdf(report)
-            }
-        }
-    }
-
-    private fun generateReport(startDate: Long, endDate: Long) {
+    private fun generateReport() {
         lifecycleScope.launch {
             try {
                 val report = database.attendanceDao()
-                    .getAttendanceReport(startDate, endDate)
+                    .getAllAttendanceReport()
                 reportAdapter.submitList(report)
 
                 if (report.isEmpty()) {
@@ -237,10 +185,5 @@ class ReportActivity : AppCompatActivity() {
             message,
             Snackbar.LENGTH_LONG
         ).show()
-    }
-
-    private fun displayReport(report: List<AttendanceReport>) {
-        // Create UI to display attendance report
-        // You can use RecyclerView or generate PDF
     }
 }

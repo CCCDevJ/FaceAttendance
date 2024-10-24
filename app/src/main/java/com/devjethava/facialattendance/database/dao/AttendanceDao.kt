@@ -23,4 +23,13 @@ interface AttendanceDao {
     """
     )
     suspend fun getAttendanceReport(startDate: Long, endDate: Long): List<AttendanceReport>
+
+    @Query(
+        """
+        SELECT e.name, a.timestamp, a.type 
+        FROM attendance a 
+        JOIN employees e ON a.employeeId = e.id Order by a.id desc
+    """
+    )
+    suspend fun getAllAttendanceReport(): List<AttendanceReport>
 }
